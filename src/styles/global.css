@@ -397,7 +397,6 @@ textarea {
 
 .tooltip-card {
   position: fixed;
-  transform: translate(-50%, -110%);
   background: #1b2743;
   color: white;
   padding: 1rem;

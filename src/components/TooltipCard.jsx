@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ExternalLink } from 'lucide-react'
 
@@ -10,6 +11,22 @@ export default function TooltipCard({ payload, onEnter = () => {}, onLeave = () 
         : []
   const primary = notes[0]
   const extra = notes.slice(1)
+  const [coords, setCoords] = useState({ x: 0, y: 0, transform: 'translate(0, 0)' })
+
+  useEffect(() => {
+    if (!payload) return
+    const margin = 16
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800
+    const anchorSide = payload.anchorSide || 'right'
+    const anchorX = payload.anchorX ?? payload.x ?? 0
+    const anchorY = payload.anchorY ?? payload.y ?? 0
+    const y = Math.min(Math.max(margin, anchorY), viewportHeight - margin)
+    const isRightAligned = anchorX > window.innerWidth * 0.7
+    const tooltipWidth = 320
+    const x = isRightAligned ? anchorX - tooltipWidth : anchorX
+    const transform = 'translate(0, -50%)'
+    setCoords({ x, y, transform })
+  }, [payload])
 
   const renderRuleNote = (note) => (
     <div key={note.rule} className="tooltip-note">
@@ -34,7 +51,7 @@ export default function TooltipCard({ payload, onEnter = () => {}, onLeave = () 
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
           transition={{ duration: 0.18 }}
-          style={{ left: payload.x, top: payload.y }}
+          style={{ left: coords.x, top: coords.y, transform: coords.transform }}
           onMouseEnter={onEnter}
           onMouseLeave={onLeave}
         >

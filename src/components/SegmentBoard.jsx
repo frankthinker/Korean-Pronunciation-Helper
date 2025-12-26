@@ -92,9 +92,17 @@ export default function SegmentBoard({ segments, activeRule, onHover }) {
             style={cardStyle}
             onMouseEnter={(event) => {
               const rect = event.currentTarget.getBoundingClientRect()
+              const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024
+              const tooltipWidth = 320
+              const margin = 16
+              const needsLeft = rect.right + tooltipWidth + margin > viewportWidth
+              const anchorSide = needsLeft ? 'left' : 'right'
               const payload = {
-                x: rect.left + rect.width / 2,
-                y: rect.top,
+                x: anchorSide === 'left' ? rect.left : rect.right,
+                y: rect.top + rect.height / 2,
+                anchorSide,
+                anchorX: anchorSide === 'left' ? rect.left : rect.right,
+                anchorY: rect.top + rect.height / 2,
                 segment,
                 note: hoverNotes[0] ?? segment.notes?.find((n) => n.rule === 'base'),
                 notes: hoverNotes,

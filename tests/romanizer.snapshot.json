@@ -1,0 +1,51 @@
+[
+  {
+    "sentence": "이 집은 사랑이에요.",
+    "finalRomanization": "i jibeun sarangieyo.",
+    "ruleStats": {
+      "liaison": 1
+    }
+  },
+  {
+    "sentence": "따뜻한 국물이 땡겨.",
+    "finalRomanization": "ttatteutan gungmulri ttaenggyeo.",
+    "ruleStats": {
+      "aspiration": 1,
+      "assimilation": 2,
+      "nInsertion": 1
+    }
+  },
+  {
+    "sentence": "서울 사람 열 장 사진.",
+    "finalRomanization": "seoul ssara myeol jjang sajin.",
+    "ruleStats": {
+      "tensification": 2,
+      "liaison": 0
+    }
+  },
+  {
+    "sentence": "관건은 시간이 아니라 태도다.",
+    "finalRomanization": "gwankkeoneun ssiganni anira taedoda.",
+    "ruleStats": {
+      "tensification": 2,
+      "liaison": 1,
+      "nInsertion": 1
+    }
+  },
+  {
+    "sentence": "무슨 이야기인지 몰라.",
+    "finalRomanization": "museu niyagiinji molra.",
+    "ruleStats": {
+      "liaison": 0
+    }
+  },
+  {
+    "sentence": "서울역 이야기야.",
+    "finalRomanization": "seoulryeo giyagiya.",
+    "ruleStats": {
+      "nInsertion": 1,
+      "assimilation": 1,
+      "liaison": 0
+    }
+  }
+]
