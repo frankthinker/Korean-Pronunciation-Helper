@@ -1,5 +1,5 @@
 :root {
-  font-family: 'Lexend', 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
   color: #0c1c36;
   background: #f9f8fb;
   --accent: #8ec5ff;
