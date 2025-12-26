@@ -411,6 +411,118 @@ textarea {
   padding-left: 1.2rem;
 }
 
+.tts-panel {
+  margin-top: 1rem;
+}
+
+.tts-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tts-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.tts-controls select {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.tts-rate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tts-rate label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: rgba(15, 23, 52, 0.8);
+}
+
+.tts-rate strong {
+  font-size: 0.95rem;
+  color: #0f1734;
+}
+
+.tts-rate input[type='range'] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(142, 197, 255, 0.9), rgba(255, 179, 193, 0.9));
+  outline: none;
+}
+
+.tts-rate input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(15, 23, 52, 0.5);
+  box-shadow: 0 2px 6px rgba(15, 23, 52, 0.25);
+  cursor: pointer;
+}
+
+.tts-rate input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(15, 23, 52, 0.5);
+  box-shadow: 0 2px 6px rgba(15, 23, 52, 0.25);
+  cursor: pointer;
+}
+
+.tts-rate__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: rgba(15, 23, 52, 0.55);
+}
+
+.primary-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  background: linear-gradient(90deg, #8ec5ff, #ffb3c1);
+  color: #0f1734;
+  font-weight: 600;
+  justify-content: center;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tts-error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.tts-hint {
+  color: rgba(15, 23, 52, 0.65);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
 @media (max-width: 1100px) {
   .kpv-layout {
     grid-template-columns: 1fr;

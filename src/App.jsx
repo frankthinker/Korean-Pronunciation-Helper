@@ -7,6 +7,7 @@ import RomanizationStrip from './components/RomanizationStrip'
 import RuleLegend from './components/RuleLegend'
 import StatsPanel from './components/StatsPanel'
 import TooltipCard from './components/TooltipCard'
+import TtsPanel from './components/TtsPanel'
 import sampleSentences from './data/sampleSentences'
 import { romanizeSentence } from './lib/romanizer'
 
@@ -61,6 +62,7 @@ export default function App() {
             isLoading={isAnalyzing}
           />
           <RuleLegend />
+          <TtsPanel text={text} />
         </div>
         <div className="kpv-column kpv-column--right">
           <RomanizationStrip text={analysis.finalRomanization} />
