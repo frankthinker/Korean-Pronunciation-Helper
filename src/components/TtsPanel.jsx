@@ -5,7 +5,7 @@ const VOICES = [
   { id: 'ko-KR-SunHiNeural', label: 'SunHi · Female' },
   { id: 'ko-KR-InJoonNeural', label: 'InJoon · Male' },
 ]
-const RATE_MIN = -80
+const RATE_MIN = -95
 const RATE_MAX = 60
 
 export default function TtsPanel({ text }) {

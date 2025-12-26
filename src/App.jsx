@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import Header from './components/Header'
 import TextInputPanel from './components/TextInputPanel'
 import RuleFilterTabs from './components/RuleFilterTabs'
@@ -32,6 +32,7 @@ export default function App() {
   const [hoverPayload, setHoverPayload] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [samples, setSamples] = useState(() => pickRandomSamples())
+  const hoverHideTimer = useRef(null)
 
   const refreshSamples = () => setSamples(pickRandomSamples())
 
@@ -47,6 +48,29 @@ export default function App() {
   }, [text])
 
   const analysis = useMemo(() => romanizeSentence(debouncedText || ''), [debouncedText])
+  useEffect(() => () => clearTimeout(hoverHideTimer.current), [])
+
+  const scheduleHoverHide = () => {
+    clearTimeout(hoverHideTimer.current)
+    hoverHideTimer.current = setTimeout(() => setHoverPayload(null), 160)
+  }
+
+  const handleSegmentHover = (payload) => {
+    if (payload) {
+      clearTimeout(hoverHideTimer.current)
+      setHoverPayload(payload)
+    } else {
+      scheduleHoverHide()
+    }
+  }
+
+  const handleTooltipEnter = () => {
+    clearTimeout(hoverHideTimer.current)
+  }
+
+  const handleTooltipLeave = () => {
+    scheduleHoverHide()
+  }
 
   return (
     <div className="kpv-app">
@@ -74,7 +98,7 @@ export default function App() {
               </div>
             </div>
             <RuleFilterTabs activeRule={activeRule} onChange={setActiveRule} stats={analysis.ruleStats} />
-            <SegmentBoard segments={analysis.segments} activeRule={activeRule} onHover={setHoverPayload} />
+            <SegmentBoard segments={analysis.segments} activeRule={activeRule} onHover={handleSegmentHover} />
           </section>
           <section className="kpv-panel">
             <div className="kpv-panel__header">
@@ -87,7 +111,7 @@ export default function App() {
           </section>
         </div>
       </main>
-      <TooltipCard payload={hoverPayload} />
+      <TooltipCard payload={hoverPayload} onEnter={handleTooltipEnter} onLeave={handleTooltipLeave} />
     </div>
   )
 }

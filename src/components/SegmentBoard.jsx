@@ -80,6 +80,11 @@ export default function SegmentBoard({ segments, activeRule, onHover }) {
         const hoverNotes = hasNote
           ? displayNotes
           : segment.notes?.filter((note) => note.rule === 'base') ?? []
+        let fallbackTags = segment.notes?.filter((note) => note.rule !== 'base') ?? []
+        if (!fallbackTags.length) {
+          fallbackTags = segment.notes?.filter((note) => note.rule === 'base') ?? []
+        }
+        const tagNotes = hasNote ? displayNotes : fallbackTags
         return (
           <motion.button
             key={segment.index}
@@ -101,8 +106,8 @@ export default function SegmentBoard({ segments, activeRule, onHover }) {
           >
             <span className="segment-char">{segment.char}</span>
             <div className="segment-tags">
-              {hasNote ? (
-                displayNotes.map((note) => (
+              {tagNotes.length ? (
+                tagNotes.map((note) => (
                   <span key={note.rule} className="segment-tag">
                     {RULE_REFERENCES[note.rule]?.label ?? note.rule}
                   </span>

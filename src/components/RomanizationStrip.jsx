@@ -10,7 +10,7 @@ export default function RomanizationStrip({ text }) {
   return (
     <motion.div className="roman-strip" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div>
-        <p className="panel-label">真实口语拉丁转写</p>
+        <p className="panel-label">真实口语发音 拉丁转写</p>
         <h2>{text || '等待输入...'}</h2>
       </div>
       <button className="ghost-btn" onClick={copyRoman}>

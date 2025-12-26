@@ -80,6 +80,12 @@ const CONNECTIVE_RULES = new Set(['liaison', 'aspiration'])
 
 const ruleIsBlocked = (context, rule) => Boolean(context?.blockedRules?.has?.(rule))
 
+function logConnectiveRule(context, rule) {
+  if (CONNECTIVE_RULES.has(rule) && context?.ruleEvents) {
+    context.ruleEvents.push(rule)
+  }
+}
+
 const ASSIMILATION_RULES = {
   'ㄱㄴ': { final: 'ㅇ', initial: 'ㄴ' },
   'ㄱㄹ': { final: 'ㅇ', initial: 'ㄴ' },
@@ -185,6 +191,7 @@ function applyLiaison(current, next, context = {}) {
   const afterInitial = romanizeInitial(released)
   const nextInitialLabel = nextInitial || '∅'
   const dropFinal = released !== 'ㅇ'
+  logConnectiveRule(context, 'liaison')
   return {
     apply: true,
     current: { ...current, final: dropFinal ? '' : current.final },
@@ -270,6 +277,7 @@ function applyAspiration(current, next, context = {}) {
   if (!next?.initial) return null
   if (ASPIRATED_MAP[next.initial]) {
     if (current?.final === 'ㅎ') {
+      logConnectiveRule(context, 'aspiration')
       return {
         apply: true,
         current: { ...current, final: '' },
@@ -284,6 +292,7 @@ function applyAspiration(current, next, context = {}) {
     if (current?.final) {
       const { base, release } = splitBatchim(current.final)
       if (release === 'ㅎ') {
+        logConnectiveRule(context, 'aspiration')
         return {
           apply: true,
           current: { ...current, final: base },
@@ -298,6 +307,7 @@ function applyAspiration(current, next, context = {}) {
     }
   }
   if (next.initial === 'ㅎ' && current?.final && ASPIRATED_MAP[current.final]) {
+    logConnectiveRule(context, 'aspiration')
     return {
       apply: true,
       current: { ...current, final: ASPIRATED_MAP[current.final] },
@@ -422,6 +432,7 @@ function applyTHFusion(current, next, context = {}) {
   if (!current?.final || next?.initial !== 'ㅎ') return null
   const fused = TH_FUSION_MAP[current.final]
   if (!fused) return null
+  logConnectiveRule(context, 'aspiration')
   return {
     apply: true,
     current: { ...current, final: '' },
@@ -579,11 +590,13 @@ function buildPairContext({
   suffixMeta,
   boundary,
   wordContexts,
+  ruleEvents,
 }) {
   const context = {
     blockedRules: new Set(),
     boundary: boundary ?? { hasSoftBoundary: false, hasHardBoundary: false },
   }
+  context.ruleEvents = ruleEvents
   context.wordBefore = resolveWordMeta(wordContexts, currentTokenIdx)
   context.wordAfter = resolveWordMeta(wordContexts, nextTokenIdx)
   context.sameWord = currentTokenIdx != null && currentTokenIdx === nextTokenIdx
@@ -635,41 +648,22 @@ function describeSegment(char, index, baseJamo, finalJamo, notes) {
   }
 }
 
-function summarizeRuleStats(segments = []) {
+function summarizeRuleStats(segments = [], pairRuleEvents = []) {
   const stats = {}
-  const activeRuns = {}
-  CONNECTIVE_RULES.forEach((rule) => {
-    activeRuns[rule] = 0
+  pairRuleEvents.forEach((rule) => {
+    stats[rule] = (stats[rule] ?? 0) + 1
   })
-
   segments.forEach((segment) => {
     const ruleSet = new Set(
       (segment.notes ?? [])
         .map((note) => note.rule)
         .filter((rule) => rule && rule !== 'base'),
     )
-
-    CONNECTIVE_RULES.forEach((rule) => {
-      if (ruleSet.has(rule)) {
-        activeRuns[rule] += 1
-      } else if (activeRuns[rule] > 0) {
-        stats[rule] = (stats[rule] ?? 0) + Math.max(activeRuns[rule] - 1, 0)
-        activeRuns[rule] = 0
-      }
-    })
-
     ruleSet.forEach((rule) => {
       if (CONNECTIVE_RULES.has(rule)) return
       stats[rule] = (stats[rule] ?? 0) + 1
     })
   })
-
-  CONNECTIVE_RULES.forEach((rule) => {
-    if (activeRuns[rule] > 0) {
-      stats[rule] = (stats[rule] ?? 0) + Math.max(activeRuns[rule] - 1, 0)
-    }
-  })
-
   return stats
 }
 
@@ -679,6 +673,7 @@ export function romanizeSentence(sentence) {
   const sequence = []
   const { charToGlobalIndex, globalToCharIndex } = buildHangulIndexMaps(sentence)
   let globalSyllableCursor = 0
+  const pairRuleEvents = []
 
   tokens.forEach((token, tokenIdx) => {
     if (token.type !== 'hangul') {
@@ -760,6 +755,7 @@ export function romanizeSentence(sentence) {
         suffixMeta,
         boundary,
         wordContexts,
+        ruleEvents: pairRuleEvents,
       })
 
       const resolution = resolveRules(updated, nextWorkJamo, context)
@@ -784,7 +780,7 @@ export function romanizeSentence(sentence) {
     finalRomanization += segment.finalRoman
   }
 
-  const ruleStats = summarizeRuleStats(segments)
+  const ruleStats = summarizeRuleStats(segments, pairRuleEvents)
 
   return { segments, finalRomanization, ruleStats }
 }

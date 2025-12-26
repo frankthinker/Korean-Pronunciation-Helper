@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { ExternalLink } from 'lucide-react'
 
-export default function TooltipCard({ payload }) {
+export default function TooltipCard({ payload, onEnter = () => {}, onLeave = () => {} }) {
   const notes =
     payload?.notes?.length
       ? payload.notes
@@ -10,6 +10,20 @@ export default function TooltipCard({ payload }) {
         : []
   const primary = notes[0]
   const extra = notes.slice(1)
+
+  const renderRuleNote = (note) => (
+    <div key={note.rule} className="tooltip-note">
+      <p className="tooltip-rule">{note.label ?? note.rule}</p>
+      {note.description && <p className="tooltip-desc">{note.description}</p>}
+      {(note.before || note.after) && (
+        <p className="tooltip-logic">
+          <span className="tooltip-value">{note.before || '—'}</span>
+          <span className="tooltip-label">→</span>
+          <span className="tooltip-value">{note.after || '—'}</span>
+        </p>
+      )}
+    </div>
+  )
 
   return (
     <AnimatePresence>
@@ -21,6 +35,8 @@ export default function TooltipCard({ payload }) {
           exit={{ opacity: 0, y: 8 }}
           transition={{ duration: 0.18 }}
           style={{ left: payload.x, top: payload.y }}
+          onMouseEnter={onEnter}
+          onMouseLeave={onLeave}
         >
           <div className="tooltip-head">
             <h4>{payload.segment.char}</h4>
@@ -31,24 +47,25 @@ export default function TooltipCard({ payload }) {
               </a>
             )}
           </div>
-          <p className="tooltip-meta">原始拼写：{payload.segment.char}</p>
-          <p className="tooltip-meta">基础罗马音：{payload.segment.baseRoman || '—'}</p>
-          <p className="tooltip-meta">最终发音：{payload.segment.finalRoman || '—'}</p>
-          <p className="tooltip-rule">{primary?.label ?? '—'}</p>
-          <p className="tooltip-desc">{primary?.description}</p>
-          {primary?.before && (
-            <p className="tooltip-logic">
-              {primary.before} → {primary.after}
+          <div className="tooltip-section tooltip-basics">
+            <p className="tooltip-meta">
+              <span className="tooltip-label">原始拼写</span>
+              <span className="tooltip-value">{payload.segment.char}</span>
             </p>
-          )}
+            <p className="tooltip-meta">
+              <span className="tooltip-label">基础罗马音</span>
+              <span className="tooltip-value">{payload.segment.baseRoman || '—'}</span>
+            </p>
+            <p className="tooltip-meta">
+              <span className="tooltip-label">最终发音</span>
+              <span className="tooltip-value">{payload.segment.finalRoman || '—'}</span>
+            </p>
+          </div>
+          {primary && <div className="tooltip-section tooltip-primary">{renderRuleNote(primary)}</div>}
           {extra.length > 0 && (
-            <div className="tooltip-extra">
-              <p>同时发生：</p>
-              <ul>
-                {extra.map((note) => (
-                  <li key={note.rule}>{note.label}</li>
-                ))}
-              </ul>
+            <div className="tooltip-section tooltip-extra">
+              <p className="tooltip-section-title">其它同时发生的音变</p>
+              {extra.map((note) => renderRuleNote(note))}
             </div>
           )}
         </motion.div>
