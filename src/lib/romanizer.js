@@ -182,6 +182,7 @@ function applyTensification(current, next) {
     note: buildNote('tensification', {
       before: next.initial,
       after: tensified,
+      targets: ['next'],
     }),
   }
 }
@@ -230,25 +231,6 @@ function applyPalatalization(current, next) {
       note: buildNote('palatalization', {
         before: current.final + next.initial,
         after: map[current.final] + next.initial,
-      }),
-    }
-  }
-  const special = {
-    'ㅅ': 'ㅆ',
-    'ㅆ': 'ㅆ',
-    'ㅈ': 'ㅈ',
-    'ㅉ': 'ㅉ',
-    'ㅊ': 'ㅊ',
-  }
-  if (special[next.initial]) {
-    return {
-      apply: true,
-      current: { ...current },
-      next: { ...next, initial: special[next.initial] },
-      note: buildNote('palatalization', {
-        label: '腭化紧音',
-        before: next.initial,
-        after: special[next.initial],
         targets: ['next'],
       }),
     }

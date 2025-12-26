@@ -7,9 +7,22 @@ import RomanizationStrip from './components/RomanizationStrip'
 import RuleLegend from './components/RuleLegend'
 import StatsPanel from './components/StatsPanel'
 import TooltipCard from './components/TooltipCard'
+import sampleSentences from './data/sampleSentences'
 import { romanizeSentence } from './lib/romanizer'
 
-const DEFAULT_SENTENCE = '오늘 저녁에 뭐 먹을래? 나는 따뜻한 국물이 땡겨.'
+const SAMPLE_BATCH_SIZE = 3
+const DEFAULT_SENTENCE = sampleSentences[0]
+
+const pickRandomSamples = (count = SAMPLE_BATCH_SIZE) => {
+  if (sampleSentences.length <= count) {
+    return [...sampleSentences]
+  }
+  const indexes = new Set()
+  while (indexes.size < count) {
+    indexes.add(Math.floor(Math.random() * sampleSentences.length))
+  }
+  return [...indexes].map((idx) => sampleSentences[idx])
+}
 
 export default function App() {
   const [text, setText] = useState(DEFAULT_SENTENCE)
@@ -17,6 +30,11 @@ export default function App() {
   const [activeRule, setActiveRule] = useState('all')
   const [hoverPayload, setHoverPayload] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [samples, setSamples] = useState(() => pickRandomSamples())
+
+  const refreshSamples = () => setSamples(pickRandomSamples())
+
+  const handleSampleSelect = (sentence) => setText(sentence)
 
   useEffect(() => {
     setIsAnalyzing(true)
@@ -37,7 +55,9 @@ export default function App() {
           <TextInputPanel
             value={text}
             onChange={setText}
-            onSampleSelect={(sample) => setText(sample)}
+            onSampleSelect={handleSampleSelect}
+            onRefreshSamples={refreshSamples}
+            samples={samples}
             isLoading={isAnalyzing}
           />
           <RuleLegend />

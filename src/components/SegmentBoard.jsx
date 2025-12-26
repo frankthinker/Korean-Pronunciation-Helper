@@ -32,7 +32,7 @@ export default function SegmentBoard({ segments, activeRule, onHover }) {
           <motion.button
             key={segment.index}
             className={`segment-card ${isDimmed ? 'is-dimmed' : ''}`}
-            style={{ borderColor: color, background: `${color}22` }}
+            style={{ borderColor: color, '--segment-bg': `${color}22` }}
             onMouseEnter={(event) => {
               const rect = event.currentTarget.getBoundingClientRect()
               const payload = {

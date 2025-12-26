@@ -1,13 +1,14 @@
 import { motion } from 'framer-motion'
-import { WandSparkles, Loader2 } from 'lucide-react'
+import { WandSparkles, Loader2, RotateCcw } from 'lucide-react'
 
-const samples = [
-  '오늘 저녁에 뭐 먹을래? 나는 따뜻한 국물이 땡겨.',
-  '학교에 가기 전에 커피 한 잔 마실까요?',
-  '저 문장을 빠르게 읽으면 어떤 음변이 생길까?',
-]
-
-export default function TextInputPanel({ value, onChange, onSampleSelect, isLoading }) {
+export default function TextInputPanel({
+  value,
+  onChange,
+  onSampleSelect,
+  onRefreshSamples,
+  samples = [],
+  isLoading,
+}) {
   return (
     <section className="kpv-panel">
       <div className="kpv-panel__header">
@@ -18,7 +19,7 @@ export default function TextInputPanel({ value, onChange, onSampleSelect, isLoad
         <motion.button
           whileTap={{ scale: 0.96 }}
           className="ghost-btn"
-          onClick={() => onSampleSelect(samples[Math.floor(Math.random() * samples.length)])}
+          onClick={() => onSampleSelect(samples[Math.floor(Math.random() * samples.length)] || '')}
         >
           <WandSparkles size={16} />
           换个示例
@@ -38,9 +39,17 @@ export default function TextInputPanel({ value, onChange, onSampleSelect, isLoad
           </div>
         )}
       </div>
+      <div className="sample-header">
+        <p className="panel-label">示例句子</p>
+        <button type="button" className="icon-btn" onClick={onRefreshSamples}>
+          <RotateCcw size={16} />
+          刷新示例
+        </button>
+      </div>
       <div className="sample-chips">
         {samples.map((sentence) => (
           <motion.button
+            type="button"
             key={sentence}
             className="chip"
             onClick={() => onSampleSelect(sentence)}
