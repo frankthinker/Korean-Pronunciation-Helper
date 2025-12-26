@@ -398,14 +398,14 @@ textarea {
 .tooltip-card {
   position: fixed;
   transform: translate(-50%, -110%);
-  background: #101e37;
+  background: #1b2743;
   color: white;
   padding: 1rem;
   border-radius: 16px;
-  width: min(280px, 80vw);
+  width: min(320px, 80vw);
   pointer-events: auto;
   z-index: 20;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
 }
 
 .tooltip-head {
@@ -427,11 +427,17 @@ textarea {
   align-items: center;
 }
 
+.tooltip-section {
+  padding: 0.4rem 0;
+}
+
+.tooltip-section + .tooltip-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 .tooltip-meta,
-.tooltip-rule,
-.tooltip-desc,
 .tooltip-logic {
-  margin: 0.25rem 0;
+  margin: 0.15rem 0;
   font-size: 0.85rem;
   display: flex;
   gap: 0.35rem;
@@ -441,27 +447,35 @@ textarea {
 .tooltip-rule {
   font-weight: 600;
   color: #f7b267;
+  margin: 0.2rem 0;
+}
+
+.tooltip-desc {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0.15rem 0 0.25rem;
+  line-height: 1.4;
 }
 
 .tooltip-label {
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .tooltip-value {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
 }
 
-.tooltip-extra {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding-top: 0.35rem;
+.tooltip-note {
+  margin: 0.25rem 0;
 }
 
-.tooltip-extra ul {
-  margin: 0.25rem 0 0;
-  padding-left: 1.2rem;
+.tooltip-section-title {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 0.25rem;
 }
 
 .tts-panel {
