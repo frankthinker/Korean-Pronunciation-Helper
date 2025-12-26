@@ -58,7 +58,7 @@ function buildCardStyle(notes) {
 
   return {
     borderColor: colors[0],
-    background: `linear-gradient(135deg, ${stops})`,
+    '--segment-bg': `linear-gradient(135deg, ${stops})`,
   }
 }
 

@@ -9,6 +9,7 @@ import {
   isHangul,
   romanizeFinal,
   romanizeInitial,
+  splitBatchim,
 } from './hangul.js'
 import { FORCED_TENSIFICATION_PATTERNS } from './tensificationLexicon.js'
 import { RULE_REFERENCES, RULE_DESCRIPTIONS } from './rules.js'
@@ -43,6 +44,8 @@ const N_INSERTION_VOWELS = new Set(['ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅖ', '�
 const H_FINALS = new Set(['ㅎ', 'ㄶ', 'ㅀ'])
 
 const WORD_BOUNDARY_CHARS = new Set([' ', '\n', '\t', '.', ',', '!', '?', '"', '\'', ')', '(', ':', ';', '-', '—', '…'])
+
+const GLIDE_VOWELS = new Set(['ㅘ', 'ㅙ', 'ㅚ', 'ㅟ', 'ㅞ'])
 
 const SUFFIX_TENSIFICATION_RULES = [
   {
@@ -258,16 +261,33 @@ function applyTensification(current, next, context = {}) {
 
 function applyAspiration(current, next, _context = {}) {
   if (!next?.initial) return null
-  if (current?.final === 'ㅎ' && ASPIRATED_MAP[next.initial]) {
-    return {
-      apply: true,
-      current: { ...current, final: '' },
-      next: { ...next, initial: ASPIRATED_MAP[next.initial] },
-      note: buildNote('aspiration', {
-        label: 'ㅎ触发送气',
-        before: next.initial,
-        after: ASPIRATED_MAP[next.initial],
-      }),
+  if (ASPIRATED_MAP[next.initial]) {
+    if (current?.final === 'ㅎ') {
+      return {
+        apply: true,
+        current: { ...current, final: '' },
+        next: { ...next, initial: ASPIRATED_MAP[next.initial] },
+        note: buildNote('aspiration', {
+          label: 'ㅎ触发送气',
+          before: next.initial,
+          after: ASPIRATED_MAP[next.initial],
+        }),
+      }
+    }
+    if (current?.final) {
+      const { base, release } = splitBatchim(current.final)
+      if (release === 'ㅎ') {
+        return {
+          apply: true,
+          current: { ...current, final: base },
+          next: { ...next, initial: ASPIRATED_MAP[next.initial] },
+          note: buildNote('aspiration', {
+            label: 'ㅎ触发送气',
+            before: `${current.final}+${next.initial}`,
+            after: `${base}${ASPIRATED_MAP[next.initial]}`,
+          }),
+        }
+      }
     }
   }
   if (next.initial === 'ㅎ' && current?.final && ASPIRATED_MAP[current.final]) {
@@ -403,19 +423,19 @@ function applyTHFusion(current, next, _context = {}) {
 
 function applyGlide(current, next, _context = {}) {
   if (!current || !next) return null
-  if (!current.final && ['ㅘ', 'ㅙ', 'ㅚ', 'ㅟ', 'ㅞ'].includes(next.medial)) {
-    return {
-      apply: true,
-      current: { ...current },
-      next: { ...next },
-      note: buildNote('glide', {
-        before: 'w + 元音',
-        after: '滑音融合',
-        targets: ['next'],
-      }),
-    }
+  if (current.final) return null
+  if (next.initial && next.initial !== 'ㅇ') return null
+  if (!GLIDE_VOWELS.has(next.medial)) return null
+  return {
+    apply: true,
+    current: { ...current },
+    next: { ...next },
+    note: buildNote('glide', {
+      before: 'w + 元音',
+      after: '滑音融合',
+      targets: ['next'],
+    }),
   }
-  return null
 }
 
 const RULE_PIPELINE = [
