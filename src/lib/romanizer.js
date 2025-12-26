@@ -10,6 +10,7 @@ import {
   romanizeFinal,
   romanizeInitial,
 } from './hangul.js'
+import { FORCED_TENSIFICATION_PATTERNS } from './tensificationLexicon.js'
 import { RULE_REFERENCES, RULE_DESCRIPTIONS } from './rules.js'
 
 const LINK_BASE = 'https://zhuanlan.zhihu.com/p/1979218803289248530'
@@ -29,14 +30,49 @@ const buildNote = (rule, extra = {}) => {
 const TENSIFICATION_FINALS = new Set([
   'ㄱ', 'ㄲ', 'ㅋ', 'ㄳ', 'ㄺ',
   'ㄷ', 'ㅅ', 'ㅆ', 'ㅈ', 'ㅊ', 'ㅌ',
-  'ㅂ', 'ㅄ', 'ㄼ', 'ㄾ', 'ㄿ', 'ㅀ'
+  'ㅂ', 'ㅄ', 'ㄼ', 'ㄾ', 'ㄿ', 'ㅀ',
+  'ㅎ', 'ㄶ',
 ])
 
 const H_WEAKENING_CONTEXT = new Set(['', 'ㄴ', 'ㄹ', 'ㅁ'])
 
-const N_INSERTION_FINALS = new Set(['ㄱ', 'ㄲ', 'ㅋ', 'ㄺ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄹ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅍ', 'ㅅ', 'ㅆ', 'ㅈ', 'ㅊ'])
+const N_INSERTION_FINALS = new Set(['ㄱ', 'ㄲ', 'ㅋ', 'ㄺ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄹ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅂ', 'ㅍ', 'ㅅ', 'ㅆ', 'ㅈ', 'ㅊ'])
 
 const N_INSERTION_VOWELS = new Set(['ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅖ', 'ㅒ'])
+
+const H_FINALS = new Set(['ㅎ', 'ㄶ', 'ㅀ'])
+
+const WORD_BOUNDARY_CHARS = new Set([' ', '\n', '\t', '.', ',', '!', '?', '"', '\'', ')', '(', ':', ';', '-', '—', '…'])
+
+const SUFFIX_TENSIFICATION_RULES = [
+  {
+    suffix: '다',
+    precedingFinals: new Set(['ㄴ', 'ㅁ']),
+    reason: '词干 + 기본형「-다」',
+  },
+  {
+    suffix: '고',
+    precedingFinals: new Set(['ㄴ', 'ㅁ']),
+    reason: '连接语尾「-고」',
+  },
+  {
+    suffix: '지만',
+    precedingFinals: new Set(['ㄴ', 'ㅁ']),
+    reason: '让步语尾「-지만」',
+  },
+  {
+    suffix: '겠다',
+    precedingFinals: new Set(['ㄴ', 'ㅁ']),
+    reason: '意志/推量语尾「-겠다」',
+  },
+  {
+    suffix: '소',
+    precedingFinals: new Set(['ㄴ', 'ㅁ']),
+    reason: '命令语尾「-소」',
+  },
+]
+
+const CONNECTIVE_RULES = new Set(['liaison', 'aspiration'])
 
 const ASSIMILATION_RULES = {
   'ㄱㄴ': { final: 'ㅇ', initial: 'ㄴ' },
@@ -129,7 +165,7 @@ function baseRomanizeTriple(jamo) {
   }
 }
 
-function applyLiaison(current, next) {
+function applyLiaison(current, next, _context = {}) {
   if (!current?.final || !next) return null
   if (current.final === 'ㅇ') return null
   const nextInitial = next.initial ?? ''
@@ -154,7 +190,7 @@ function applyLiaison(current, next) {
   }
 }
 
-function applyAssimilation(current, next) {
+function applyAssimilation(current, next, _context = {}) {
   if (!current?.final || !next?.initial) return null
   const pair = current.final + next.initial
   const result = ASSIMILATION_RULES[pair]
@@ -170,11 +206,33 @@ function applyAssimilation(current, next) {
   }
 }
 
-function applyTensification(current, next) {
-  if (!next?.initial || !current?.final) return null
-  if (!TENSIFICATION_FINALS.has(current.final)) return null
+function applyTensification(current, next, context = {}) {
+  if (!next?.initial) return null
   const tensified = TENSE_MAP[next.initial]
   if (!tensified) return null
+  if (tensified === next.initial) return null
+
+  const reasonDescription = context.tensificationReason
+    ? `${RULE_DESCRIPTIONS.tensification}｜${context.tensificationReason}`
+    : undefined
+
+  if (context.forceTense) {
+    return {
+      apply: true,
+      current: { ...current },
+      next: { ...next, initial: tensified },
+      note: buildNote('tensification', {
+        before: next.initial,
+        after: tensified,
+        targets: ['next'],
+        ...(reasonDescription ? { description: reasonDescription } : {}),
+      }),
+    }
+  }
+
+  if (!current?.final) return null
+  if (H_FINALS.has(current.final) && next.initial !== 'ㅅ') return null
+  if (!TENSIFICATION_FINALS.has(current.final)) return null
   return {
     apply: true,
     current: { ...current },
@@ -183,11 +241,12 @@ function applyTensification(current, next) {
       before: next.initial,
       after: tensified,
       targets: ['next'],
+      ...(reasonDescription ? { description: reasonDescription } : {}),
     }),
   }
 }
 
-function applyAspiration(current, next) {
+function applyAspiration(current, next, _context = {}) {
   if (!next?.initial) return null
   if (current?.final === 'ㅎ' && ASPIRATED_MAP[next.initial]) {
     return {
@@ -216,7 +275,7 @@ function applyAspiration(current, next) {
   return null
 }
 
-function applyPalatalization(current, next) {
+function applyPalatalization(current, next, _context = {}) {
   if (!next?.initial || !PALATAL_TRIGGERS.has(next.medial)) return null
   const map = {
     'ㄷ': 'ㅈ',
@@ -238,7 +297,7 @@ function applyPalatalization(current, next) {
   return null
 }
 
-function applyContraction(current, next) {
+function applyContraction(current, next, _context = {}) {
   if (!current || !next) return null
   if (current.final === 'ㅎ' && next.initial === 'ㅇ' && next.medial === 'ㅕ') {
     return {
@@ -267,7 +326,7 @@ function applyContraction(current, next) {
   return null
 }
 
-function applyHWeakening(current, next) {
+function applyHWeakening(current, next, _context = {}) {
   if (!current || !next) return null
   if (current.final === 'ㅎ' && (!next.initial || next.initial === 'ㅇ')) {
     return {
@@ -298,14 +357,12 @@ function applyHWeakening(current, next) {
   return null
 }
 
-function applyNInsertion(current, next) {
+function applyNInsertion(current, next, _context = {}) {
   if (!current || !next) return null
   if (next.initial !== 'ㅇ') return null
   if (!N_INSERTION_VOWELS.has(next.medial)) return null
   const prevFinal = current.final ?? ''
-  const finalTrigger = prevFinal && N_INSERTION_FINALS.has(prevFinal)
-  const medialTrigger = !prevFinal && N_INSERTION_VOWELS.has(current.medial ?? '')
-  if (!finalTrigger && !medialTrigger) return null
+  if (!prevFinal || !N_INSERTION_FINALS.has(prevFinal)) return null
   return {
     apply: true,
     current: { ...current },
@@ -318,7 +375,7 @@ function applyNInsertion(current, next) {
   }
 }
 
-function applyTHFusion(current, next) {
+function applyTHFusion(current, next, _context = {}) {
   if (!current?.final || next?.initial !== 'ㅎ') return null
   const fused = TH_FUSION_MAP[current.final]
   if (!fused) return null
@@ -334,7 +391,7 @@ function applyTHFusion(current, next) {
   }
 }
 
-function applyGlide(current, next) {
+function applyGlide(current, next, _context = {}) {
   if (!current || !next) return null
   if (!current.final && ['ㅘ', 'ㅙ', 'ㅚ', 'ㅟ', 'ㅞ'].includes(next.medial)) {
     return {
@@ -364,10 +421,10 @@ const RULE_PIPELINE = [
   applyGlide,
 ]
 
-function resolveRules(current, next) {
+function resolveRules(current, next, context = {}) {
   const state = { current: cloneJamo(current), next: cloneJamo(next), notes: [] }
   RULE_PIPELINE.forEach((fn) => {
-    const outcome = fn(state.current, state.next)
+    const outcome = fn(state.current, state.next, context)
     if (outcome?.apply) {
       state.current = outcome.current
       state.next = outcome.next
@@ -388,6 +445,66 @@ function distributeNotes(notes = []) {
   return { currentNotes, nextNotes }
 }
 
+function buildHangulIndexMaps(sentence) {
+  const charToGlobalIndex = new Map()
+  const globalToCharIndex = []
+  for (let idx = 0; idx < sentence.length; idx += 1) {
+    const char = sentence[idx]
+    if (isHangul(char)) {
+      const globalIndex = globalToCharIndex.length
+      charToGlobalIndex.set(idx, globalIndex)
+      globalToCharIndex.push(idx)
+    }
+  }
+  return { charToGlobalIndex, globalToCharIndex }
+}
+
+function collectForcedTenseMap(sentence, charToGlobalIndex) {
+  const forcedMap = new Map()
+  FORCED_TENSIFICATION_PATTERNS.forEach(({ pattern, targets, reason }) => {
+    if (!pattern) return
+    let start = sentence.indexOf(pattern)
+    while (start !== -1) {
+      const localIndices = []
+      for (let offset = 0; offset < pattern.length; offset += 1) {
+        const absolute = start + offset
+        const char = pattern[offset]
+        if (!isHangul(char)) continue
+        const globalIndex = charToGlobalIndex.get(absolute)
+        if (typeof globalIndex === 'number') {
+          localIndices.push(globalIndex)
+        }
+      }
+      targets?.forEach((targetIdx) => {
+        const globalTarget = localIndices[targetIdx]
+        if (typeof globalTarget === 'number' && !forcedMap.has(globalTarget)) {
+          forcedMap.set(globalTarget, reason)
+        }
+      })
+      start = sentence.indexOf(pattern, start + 1)
+    }
+  })
+  return forcedMap
+}
+
+function matchSuffixContext(currentJamo, nextUnit, sentence, globalToCharIndex) {
+  if (!currentJamo || !nextUnit) return null
+  const final = currentJamo.final ?? ''
+  if (!final) return null
+  const charIndex = globalToCharIndex[nextUnit.globalIndex]
+  if (typeof charIndex !== 'number') return null
+
+  for (const rule of SUFFIX_TENSIFICATION_RULES) {
+    if (!rule.precedingFinals.has(final)) continue
+    if (!sentence.startsWith(rule.suffix, charIndex)) continue
+    const afterChar = sentence[charIndex + rule.suffix.length]
+    if (afterChar && !WORD_BOUNDARY_CHARS.has(afterChar)) continue
+    return { reason: rule.reason }
+  }
+
+  return null
+}
+
 function describeSegment(char, index, baseJamo, finalJamo, notes) {
   const base = baseRomanizeTriple(baseJamo)
   return {
@@ -402,64 +519,148 @@ function describeSegment(char, index, baseJamo, finalJamo, notes) {
   }
 }
 
+function summarizeRuleStats(segments = []) {
+  const stats = {}
+  const activeRuns = {}
+  CONNECTIVE_RULES.forEach((rule) => {
+    activeRuns[rule] = 0
+  })
+
+  segments.forEach((segment) => {
+    const ruleSet = new Set(
+      (segment.notes ?? [])
+        .map((note) => note.rule)
+        .filter((rule) => rule && rule !== 'base'),
+    )
+
+    CONNECTIVE_RULES.forEach((rule) => {
+      if (ruleSet.has(rule)) {
+        activeRuns[rule] += 1
+      } else if (activeRuns[rule] > 0) {
+        stats[rule] = (stats[rule] ?? 0) + Math.max(activeRuns[rule] - 1, 0)
+        activeRuns[rule] = 0
+      }
+    })
+
+    ruleSet.forEach((rule) => {
+      if (CONNECTIVE_RULES.has(rule)) return
+      stats[rule] = (stats[rule] ?? 0) + 1
+    })
+  })
+
+  CONNECTIVE_RULES.forEach((rule) => {
+    if (activeRuns[rule] > 0) {
+      stats[rule] = (stats[rule] ?? 0) + Math.max(activeRuns[rule] - 1, 0)
+    }
+  })
+
+  return stats
+}
+
 export function romanizeSentence(sentence) {
   const tokens = tokenizeSentence(sentence)
-  const segments = []
-  let finalRomanization = ''
-  const ruleStats = {}
+  const sequence = []
+  const { charToGlobalIndex, globalToCharIndex } = buildHangulIndexMaps(sentence)
+  let globalSyllableCursor = 0
 
   tokens.forEach((token, tokenIdx) => {
     if (token.type !== 'hangul') {
-      segments.push({ type: 'other', text: token.text })
-      finalRomanization += token.text
+      sequence.push({ type: 'other', text: token.text })
       return
     }
-
     const syllables = analyzeSyllableBlock(token.text)
-    for (let i = 0; i < syllables.length; i++) {
-      const unit = syllables[i]
-      if (!unit.baseJamo) {
-        segments.push({ type: 'other', text: unit.char })
-        finalRomanization += unit.char
+    syllables.forEach((unit, syllableIdx) => {
+      unit.globalIndex = globalSyllableCursor++
+      sequence.push({
+        type: 'syllable',
+        unit,
+        tokenIdx,
+        syllableIdx,
+      })
+    })
+  })
+
+  const forcedTenseMap = collectForcedTenseMap(sentence, charToGlobalIndex)
+  const segments = []
+  let finalRomanization = ''
+
+  const isSoftBoundary = (text) => /^\s+$/.test(text)
+
+  const findNextSyllable = (startIdx) => {
+    for (let idx = startIdx; idx < sequence.length; idx++) {
+      const item = sequence[idx]
+      if (item.type === 'syllable') {
+        return { unit: item.unit, index: idx }
+      }
+      if (item.type === 'other' && isSoftBoundary(item.text)) {
         continue
       }
+      break
+    }
+    return { unit: null, index: null }
+  }
 
-      const baseJamo = cloneJamo(unit.baseJamo)
-      let updated = cloneJamo(unit.workJamo)
-      let notes = unit.pendingNotes ? [...unit.pendingNotes] : []
-      const nextUnit = syllables[i + 1]
-      const nextWorkJamo = nextUnit?.workJamo ? cloneJamo(nextUnit.workJamo) : null
+  for (let idx = 0; idx < sequence.length; idx++) {
+    const item = sequence[idx]
+    if (item.type === 'other') {
+      segments.push({ type: 'other', text: item.text })
+      finalRomanization += item.text
+      continue
+    }
 
-      if (nextWorkJamo) {
-        const resolution = resolveRules(updated, nextWorkJamo)
-        updated = resolution.current
-        syllables[i + 1].workJamo = resolution.next
-        const { currentNotes, nextNotes } = distributeNotes(resolution.notes)
-        notes = [...notes, ...currentNotes]
-        if (nextNotes.length) {
-          syllables[i + 1].pendingNotes = [
-            ...(syllables[i + 1].pendingNotes ?? []),
-            ...nextNotes,
-          ]
-        }
+    const unit = item.unit
+    if (!unit.baseJamo) {
+      segments.push({ type: 'other', text: unit.char })
+      finalRomanization += unit.char
+      continue
+    }
+
+    const baseJamo = cloneJamo(unit.baseJamo)
+    let updated = cloneJamo(unit.workJamo)
+    let notes = unit.pendingNotes ? [...unit.pendingNotes] : []
+    const { unit: nextUnit } = findNextSyllable(idx + 1)
+    const nextWorkJamo = nextUnit?.workJamo ? cloneJamo(nextUnit.workJamo) : null
+
+    if (nextWorkJamo) {
+      const forcedReason = nextUnit ? forcedTenseMap.get(nextUnit.globalIndex) : null
+      const suffixMeta =
+        nextUnit && nextUnit.globalIndex != null
+          ? matchSuffixContext(updated, nextUnit, sentence, globalToCharIndex)
+          : null
+      const reasonParts = []
+      if (forcedReason) reasonParts.push(forcedReason)
+      if (suffixMeta?.reason && !reasonParts.includes(suffixMeta.reason)) {
+        reasonParts.push(suffixMeta.reason)
+      }
+      const context = {}
+      if (reasonParts.length) {
+        context.forceTense = true
+        context.tensificationReason = reasonParts.join('，')
       }
 
-      unit.workJamo = updated
-      const segment = describeSegment(
-        unit.char,
-        `${tokenIdx}-${i}`,
-        baseJamo,
-        updated,
-        notes,
-      )
-      segments.push(segment)
-      finalRomanization += segment.finalRoman
-      segment.notes.forEach((note) => {
-        if (note.rule === 'base') return
-        ruleStats[note.rule] = (ruleStats[note.rule] ?? 0) + 1
-      })
+      const resolution = resolveRules(updated, nextWorkJamo, context)
+      updated = resolution.current
+      nextUnit.workJamo = resolution.next
+      const { currentNotes, nextNotes } = distributeNotes(resolution.notes)
+      notes = [...notes, ...currentNotes]
+      if (nextNotes.length) {
+        nextUnit.pendingNotes = [...(nextUnit.pendingNotes ?? []), ...nextNotes]
+      }
     }
-  })
+
+    unit.workJamo = updated
+    const segment = describeSegment(
+      unit.char,
+      `${item.tokenIdx}-${item.syllableIdx}`,
+      baseJamo,
+      updated,
+      notes,
+    )
+    segments.push(segment)
+    finalRomanization += segment.finalRoman
+  }
+
+  const ruleStats = summarizeRuleStats(segments)
 
   return { segments, finalRomanization, ruleStats }
 }

@@ -200,7 +200,7 @@ export function composeRomanization(jamoTriple) {
 
 export function cloneJamo(triple) {
   if (!triple) return null
-  return { initial: triple.initial, medial: triple.medial, final: triple.final }
+  return { ...triple }
 }
 
 export function splitBatchim(finalJamo) {
