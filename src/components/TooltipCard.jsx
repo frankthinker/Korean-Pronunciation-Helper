@@ -2,6 +2,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ExternalLink } from 'lucide-react'
 
 export default function TooltipCard({ payload }) {
+  const notes =
+    payload?.notes?.length
+      ? payload.notes
+      : payload?.note
+        ? [payload.note]
+        : []
+  const primary = notes[0]
+  const extra = notes.slice(1)
+
   return (
     <AnimatePresence>
       {payload?.segment && (
@@ -15,18 +24,32 @@ export default function TooltipCard({ payload }) {
         >
           <div className="tooltip-head">
             <h4>{payload.segment.char}</h4>
-            <a href={payload.note?.link} target="_blank" rel="noreferrer">
-              查看规则
-              <ExternalLink size={14} />
-            </a>
+            {primary?.link && (
+              <a href={primary.link} target="_blank" rel="noreferrer">
+                查看规则
+                <ExternalLink size={14} />
+              </a>
+            )}
           </div>
           <p className="tooltip-meta">原始拼写：{payload.segment.char}</p>
           <p className="tooltip-meta">基础罗马音：{payload.segment.baseRoman || '—'}</p>
           <p className="tooltip-meta">最终发音：{payload.segment.finalRoman || '—'}</p>
-          <p className="tooltip-rule">{payload.note?.label}</p>
-          <p className="tooltip-desc">{payload.note?.description}</p>
-          {payload.note?.before && (
-            <p className="tooltip-logic">{payload.note.before} → {payload.note.after}</p>
+          <p className="tooltip-rule">{primary?.label ?? '—'}</p>
+          <p className="tooltip-desc">{primary?.description}</p>
+          {primary?.before && (
+            <p className="tooltip-logic">
+              {primary.before} → {primary.after}
+            </p>
+          )}
+          {extra.length > 0 && (
+            <div className="tooltip-extra">
+              <p>同时发生：</p>
+              <ul>
+                {extra.map((note) => (
+                  <li key={note.rule}>{note.label}</li>
+                ))}
+              </ul>
+            </div>
           )}
         </motion.div>
       )}

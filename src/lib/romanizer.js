@@ -195,6 +195,15 @@ function applyAssimilation(current, next, _context = {}) {
   const pair = current.final + next.initial
   const result = ASSIMILATION_RULES[pair]
   if (!result) return null
+
+  const currentChanged = current.final !== result.final
+  const nextChanged = next.initial !== result.initial
+  if (!currentChanged && !nextChanged) return null
+
+  const targets = []
+  if (currentChanged) targets.push('current')
+  if (nextChanged) targets.push('next')
+
   return {
     apply: true,
     current: { ...current, final: result.final },
@@ -202,6 +211,7 @@ function applyAssimilation(current, next, _context = {}) {
     note: buildNote('assimilation', {
       before: pair,
       after: result.final + result.initial,
+      targets,
     }),
   }
 }

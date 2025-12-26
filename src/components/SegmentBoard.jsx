@@ -1,17 +1,65 @@
 import { motion } from 'framer-motion'
 import { RULE_COLORS, RULE_REFERENCES } from '../lib/rules'
 
-function deriveNote(segment, activeRule) {
-  if (!segment?.notes) return null
-  if (activeRule === 'all') {
-    return segment.notes.find((note) => note.rule !== 'base') ?? segment.notes.find((note) => note.rule === 'base')
-  }
-  return segment.notes.find((note) => note.rule === activeRule)
+function getDisplayNotes(segment, activeRule) {
+  if (!segment?.notes?.length) return []
+  const filtered = segment.notes.filter((note) => note.rule !== 'base')
+  const seen = new Set()
+  const results = []
+
+  filtered.forEach((note) => {
+    if (activeRule !== 'all' && note.rule !== activeRule) return
+    if (seen.has(note.rule)) return
+    seen.add(note.rule)
+    results.push(note)
+  })
+
+  if (results.length) return results
+
+  if (activeRule !== 'all') return []
+
+  const baseNote = segment.notes.find((note) => note.rule === 'base')
+  return baseNote ? [baseNote] : []
 }
 
-function getColor(note) {
-  if (!note) return 'var(--neutral-200)'
-  return RULE_COLORS[note.rule] ?? RULE_COLORS.default
+function buildCardStyle(notes) {
+  if (!notes.length) {
+    return {
+      borderColor: 'var(--neutral-200)',
+      '--segment-bg': 'rgba(255, 255, 255, 0.95)',
+    }
+  }
+  const colors = notes
+    .map((note) => RULE_COLORS[note.rule] ?? RULE_COLORS.default)
+    .filter(Boolean)
+
+  if (!colors.length) {
+    return {
+      borderColor: 'var(--neutral-200)',
+      '--segment-bg': 'rgba(255, 255, 255, 0.95)',
+    }
+  }
+
+  if (colors.length === 1) {
+    const color = colors[0]
+    return {
+      borderColor: color,
+      '--segment-bg': `${color}22`,
+    }
+  }
+
+  const stops = colors
+    .slice(0, 3)
+    .map((color, idx, arr) => {
+      const ratio = Math.round((idx / (arr.length - 1 || 1)) * 100)
+      return `${color}33 ${ratio}%`
+    })
+    .join(', ')
+
+  return {
+    borderColor: colors[0],
+    background: `linear-gradient(135deg, ${stops})`,
+  }
 }
 
 export default function SegmentBoard({ segments, activeRule, onHover }) {
@@ -25,21 +73,26 @@ export default function SegmentBoard({ segments, activeRule, onHover }) {
             </span>
           )
         }
-        const note = deriveNote(segment, activeRule)
-        const color = getColor(note)
-        const isDimmed = activeRule !== 'all' && !note
+        const displayNotes = getDisplayNotes(segment, activeRule)
+        const hasNote = displayNotes.length > 0
+        const isDimmed = activeRule !== 'all' && !hasNote
+        const cardStyle = buildCardStyle(displayNotes)
+        const hoverNotes = hasNote
+          ? displayNotes
+          : segment.notes?.filter((note) => note.rule === 'base') ?? []
         return (
           <motion.button
             key={segment.index}
             className={`segment-card ${isDimmed ? 'is-dimmed' : ''}`}
-            style={{ borderColor: color, '--segment-bg': `${color}22` }}
+            style={cardStyle}
             onMouseEnter={(event) => {
               const rect = event.currentTarget.getBoundingClientRect()
               const payload = {
                 x: rect.left + rect.width / 2,
                 y: rect.top,
                 segment,
-                note: note ?? segment.notes?.find((n) => n.rule === 'base'),
+                note: hoverNotes[0] ?? segment.notes?.find((n) => n.rule === 'base'),
+                notes: hoverNotes,
               }
               onHover(payload)
             }}
@@ -47,7 +100,17 @@ export default function SegmentBoard({ segments, activeRule, onHover }) {
             whileHover={{ y: -4 }}
           >
             <span className="segment-char">{segment.char}</span>
-            <small>{note ? RULE_REFERENCES[note.rule]?.label ?? note.rule : '—'}</small>
+            <div className="segment-tags">
+              {hasNote ? (
+                displayNotes.map((note) => (
+                  <span key={note.rule} className="segment-tag">
+                    {RULE_REFERENCES[note.rule]?.label ?? note.rule}
+                  </span>
+                ))
+              ) : (
+                <small>—</small>
+              )}
+            </div>
             <p className="segment-roman">{segment.finalRoman}</p>
           </motion.button>
         )

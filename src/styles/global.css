@@ -273,6 +273,23 @@ textarea {
   transform: translateZ(0);
 }
 
+.segment-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 1.4rem;
+}
+
+.segment-tag {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  color: #0f1734;
+  font-weight: 500;
+}
+
 .segment-card.is-dimmed {
   opacity: 0.35;
 }
@@ -382,6 +399,16 @@ textarea {
 
 .tooltip-rule {
   font-weight: 600;
+}
+
+.tooltip-extra {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.tooltip-extra ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
 }
 
 @media (max-width: 1100px) {
