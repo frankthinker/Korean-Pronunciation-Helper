@@ -13,6 +13,7 @@ import {
 } from './hangul.js'
 import { FORCED_TENSIFICATION_PATTERNS } from './tensificationLexicon.js'
 import { RULE_REFERENCES, RULE_DESCRIPTIONS } from './rules.js'
+import { classifyWord } from './lexicon.js'
 
 const LINK_BASE = 'https://zhuanlan.zhihu.com/p/1979218803289248530'
 
@@ -76,6 +77,8 @@ const SUFFIX_TENSIFICATION_RULES = [
 ]
 
 const CONNECTIVE_RULES = new Set(['liaison', 'aspiration'])
+
+const ruleIsBlocked = (context, rule) => Boolean(context?.blockedRules?.has?.(rule))
 
 const ASSIMILATION_RULES = {
   'ㄱㄴ': { final: 'ㅇ', initial: 'ㄴ' },
@@ -168,7 +171,8 @@ function baseRomanizeTriple(jamo) {
   }
 }
 
-function applyLiaison(current, next, _context = {}) {
+function applyLiaison(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'liaison')) return null
   if (!current?.final || !next) return null
   if (current.final === 'ㅇ') return null
   const nextInitial = next.initial ?? ''
@@ -193,7 +197,8 @@ function applyLiaison(current, next, _context = {}) {
   }
 }
 
-function applyAssimilation(current, next, _context = {}) {
+function applyAssimilation(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'assimilation')) return null
   if (!current?.final || !next?.initial) return null
   const pair = current.final + next.initial
   const result = ASSIMILATION_RULES[pair]
@@ -220,6 +225,7 @@ function applyAssimilation(current, next, _context = {}) {
 }
 
 function applyTensification(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'tensification')) return null
   if (!next?.initial) return null
   const tensified = TENSE_MAP[next.initial]
   if (!tensified) return null
@@ -259,7 +265,8 @@ function applyTensification(current, next, context = {}) {
   }
 }
 
-function applyAspiration(current, next, _context = {}) {
+function applyAspiration(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'aspiration')) return null
   if (!next?.initial) return null
   if (ASPIRATED_MAP[next.initial]) {
     if (current?.final === 'ㅎ') {
@@ -305,7 +312,8 @@ function applyAspiration(current, next, _context = {}) {
   return null
 }
 
-function applyPalatalization(current, next, _context = {}) {
+function applyPalatalization(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'palatalization')) return null
   if (!next?.initial || !PALATAL_TRIGGERS.has(next.medial)) return null
   const map = {
     'ㄷ': 'ㅈ',
@@ -327,7 +335,8 @@ function applyPalatalization(current, next, _context = {}) {
   return null
 }
 
-function applyContraction(current, next, _context = {}) {
+function applyContraction(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'contraction')) return null
   if (!current || !next) return null
   if (current.final === 'ㅎ' && next.initial === 'ㅇ' && next.medial === 'ㅕ') {
     return {
@@ -356,7 +365,8 @@ function applyContraction(current, next, _context = {}) {
   return null
 }
 
-function applyHWeakening(current, next, _context = {}) {
+function applyHWeakening(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'hWeakening')) return null
   if (!current || !next) return null
   if (current.final === 'ㅎ' && (!next.initial || next.initial === 'ㅇ')) {
     return {
@@ -387,7 +397,9 @@ function applyHWeakening(current, next, _context = {}) {
   return null
 }
 
-function applyNInsertion(current, next, _context = {}) {
+function applyNInsertion(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'nInsertion')) return null
+  if (context?.blockNInsertion) return null
   if (!current || !next) return null
   if (next.initial !== 'ㅇ') return null
   if (!N_INSERTION_VOWELS.has(next.medial)) return null
@@ -405,7 +417,8 @@ function applyNInsertion(current, next, _context = {}) {
   }
 }
 
-function applyTHFusion(current, next, _context = {}) {
+function applyTHFusion(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'aspiration')) return null
   if (!current?.final || next?.initial !== 'ㅎ') return null
   const fused = TH_FUSION_MAP[current.final]
   if (!fused) return null
@@ -421,7 +434,8 @@ function applyTHFusion(current, next, _context = {}) {
   }
 }
 
-function applyGlide(current, next, _context = {}) {
+function applyGlide(current, next, context = {}) {
+  if (ruleIsBlocked(context, 'glide')) return null
   if (!current || !next) return null
   if (current.final) return null
   if (next.initial && next.initial !== 'ㅇ') return null
@@ -517,6 +531,27 @@ function collectForcedTenseMap(sentence, charToGlobalIndex) {
   return forcedMap
 }
 
+function buildWordContexts(tokens = []) {
+  return tokens.map((token) => {
+    if (token.type !== 'hangul') return null
+    return classifyWord(token.text)
+  })
+}
+
+function createWordMetaFallback() {
+  return {
+    role: 'content',
+    tags: new Set(),
+    blockNInsertion: false,
+    prefersTense: false,
+  }
+}
+
+function resolveWordMeta(wordContexts, tokenIdx) {
+  if (typeof tokenIdx !== 'number') return createWordMetaFallback()
+  return wordContexts[tokenIdx] ?? createWordMetaFallback()
+}
+
 function matchSuffixContext(currentJamo, nextUnit, sentence, globalToCharIndex) {
   if (!currentJamo || !nextUnit) return null
   const final = currentJamo.final ?? ''
@@ -532,6 +567,57 @@ function matchSuffixContext(currentJamo, nextUnit, sentence, globalToCharIndex) 
     return { reason: rule.reason }
   }
 
+  return null
+}
+
+function buildPairContext({
+  currentUnit,
+  nextUnit,
+  currentTokenIdx,
+  nextTokenIdx,
+  forcedReason,
+  suffixMeta,
+  boundary,
+  wordContexts,
+}) {
+  const context = {
+    blockedRules: new Set(),
+    boundary: boundary ?? { hasSoftBoundary: false, hasHardBoundary: false },
+  }
+  context.wordBefore = resolveWordMeta(wordContexts, currentTokenIdx)
+  context.wordAfter = resolveWordMeta(wordContexts, nextTokenIdx)
+  context.sameWord = currentTokenIdx != null && currentTokenIdx === nextTokenIdx
+  context.betweenWords = !context.sameWord
+  context.blockNInsertion = Boolean(context.wordAfter?.blockNInsertion)
+
+  const reasons = []
+  if (forcedReason) reasons.push(forcedReason)
+  if (suffixMeta?.reason) reasons.push(suffixMeta.reason)
+  const semanticReason = detectSemanticTenseReason(currentUnit, nextUnit, context)
+  if (semanticReason) reasons.push(semanticReason)
+  if (reasons.length) {
+    context.forceTense = true
+    context.tensificationReason = Array.from(new Set(reasons)).join('，')
+  }
+  return context
+}
+
+function detectSemanticTenseReason(currentUnit, nextUnit, context = {}) {
+  if (!currentUnit || !nextUnit) return null
+  const boundary = context.boundary ?? {}
+  const allowCrossWord = context.betweenWords && boundary.hasSoftBoundary && !boundary.hasHardBoundary
+  if (!allowCrossWord) return null
+  const final = currentUnit.final ?? ''
+  const tags = context.wordAfter?.tags ?? new Set()
+  if (final === 'ㄹ' && tags.has('dependentNoun')) {
+    return '连体形-ㄹ + 依存名词'
+  }
+  if ((final === 'ㄴ' || final === 'ㅁ') && tags.has('counter')) {
+    return 'ㄴ/ㅁ + 计数名词'
+  }
+  if (context.wordAfter?.prefersTense && final) {
+    return '语义词汇紧音化'
+  }
   return null
 }
 
@@ -589,6 +675,7 @@ function summarizeRuleStats(segments = []) {
 
 export function romanizeSentence(sentence) {
   const tokens = tokenizeSentence(sentence)
+  const wordContexts = buildWordContexts(tokens)
   const sequence = []
   const { charToGlobalIndex, globalToCharIndex } = buildHangulIndexMaps(sentence)
   let globalSyllableCursor = 0
@@ -617,17 +704,23 @@ export function romanizeSentence(sentence) {
   const isSoftBoundary = (text) => /^\s+$/.test(text)
 
   const findNextSyllable = (startIdx) => {
+    let hasSoftBoundary = false
+    let hasHardBoundary = false
     for (let idx = startIdx; idx < sequence.length; idx++) {
       const item = sequence[idx]
       if (item.type === 'syllable') {
-        return { unit: item.unit, index: idx }
+        return { unit: item.unit, index: idx, boundary: { hasSoftBoundary, hasHardBoundary } }
       }
-      if (item.type === 'other' && isSoftBoundary(item.text)) {
-        continue
+      if (item.type === 'other') {
+        if (isSoftBoundary(item.text)) {
+          hasSoftBoundary = true
+          continue
+        }
+        hasHardBoundary = true
+        break
       }
-      break
     }
-    return { unit: null, index: null }
+    return { unit: null, index: null, boundary: { hasSoftBoundary, hasHardBoundary } }
   }
 
   for (let idx = 0; idx < sequence.length; idx++) {
@@ -648,7 +741,7 @@ export function romanizeSentence(sentence) {
     const baseJamo = cloneJamo(unit.baseJamo)
     let updated = cloneJamo(unit.workJamo)
     let notes = unit.pendingNotes ? [...unit.pendingNotes] : []
-    const { unit: nextUnit } = findNextSyllable(idx + 1)
+    const { unit: nextUnit, index: nextIndex, boundary } = findNextSyllable(idx + 1)
     const nextWorkJamo = nextUnit?.workJamo ? cloneJamo(nextUnit.workJamo) : null
 
     if (nextWorkJamo) {
@@ -657,16 +750,17 @@ export function romanizeSentence(sentence) {
         nextUnit && nextUnit.globalIndex != null
           ? matchSuffixContext(updated, nextUnit, sentence, globalToCharIndex)
           : null
-      const reasonParts = []
-      if (forcedReason) reasonParts.push(forcedReason)
-      if (suffixMeta?.reason && !reasonParts.includes(suffixMeta.reason)) {
-        reasonParts.push(suffixMeta.reason)
-      }
-      const context = {}
-      if (reasonParts.length) {
-        context.forceTense = true
-        context.tensificationReason = reasonParts.join('，')
-      }
+      const nextTokenIdx = typeof nextIndex === 'number' ? sequence[nextIndex].tokenIdx : null
+      const context = buildPairContext({
+        currentUnit: updated,
+        nextUnit: nextWorkJamo,
+        currentTokenIdx: item.tokenIdx,
+        nextTokenIdx,
+        forcedReason,
+        suffixMeta,
+        boundary,
+        wordContexts,
+      })
 
       const resolution = resolveRules(updated, nextWorkJamo, context)
       updated = resolution.current

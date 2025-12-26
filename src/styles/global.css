@@ -104,11 +104,20 @@ body {
 }
 
 .panel-label {
+  font-size: 1.4rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #0f1734;
+  margin: 0;
+}
+
+.kpv-panel__header h2 {
   font-size: 0.85rem;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: rgba(15, 23, 52, 0.6);
-  margin: 0;
+  color: rgba(15, 23, 52, 0.55);
+  margin: 0.35rem 0 0.9rem;
 }
 
 textarea {
@@ -199,6 +208,7 @@ textarea {
   gap: 0.4rem;
   cursor: pointer;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .rule-legend {
@@ -335,11 +345,14 @@ textarea {
 .roman-strip h2 {
   margin: 0.4rem 0 0;
   font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
@@ -348,6 +361,7 @@ textarea {
   border-radius: 20px;
   border: 2px solid var(--border);
   background: rgba(255, 255, 255, 0.7);
+  width: clamp(150px, 18vw, 200px);
 }
 
 .stat-card strong {
@@ -430,10 +444,11 @@ textarea {
 
 .tts-controls select {
   border-radius: 999px;
-  border: 1px solid var(--border);
-  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(15, 23, 52, 0.1);
+  padding: 0.55rem 1.2rem;
   font-size: 0.95rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: #f6f7fb;
+  box-shadow: none;
 }
 
 .tts-rate {
@@ -495,7 +510,7 @@ textarea {
 .primary-btn {
   border: none;
   border-radius: 999px;
-  padding: 0.6rem 1.2rem;
+  padding: 0.6rem 1.5rem;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
